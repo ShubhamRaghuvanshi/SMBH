@@ -9,7 +9,7 @@ import yt_funcs
 import yt
 from scipy import stats
 from PIL import Image, ImageDraw, ImageFont
-#plt.rcParams['text.usetex'] = True
+plt.rcParams['text.usetex'] = True
 plt.rc('text', usetex=True)
 
 #constants 
@@ -27,10 +27,10 @@ mH = 1.6735575e-24
 kB = 1.3806490e-16
 mP = 1.6726219e-24
 X = 0.76
-h = 0.703100835997471
-Om = 0.276
+h = 0.6773999
+Om = 0.30889999
 G_cgs = 6.674e-8
-H0 = 70.3/h # h(km/s)/Mpc
+H0 = 100.0 # h(km/s)/Mpc
 
 #cgs  units
 unit_M            = Msun
@@ -102,33 +102,35 @@ def read_units(simdir, outnum):
 
   outnumn_char = str(outnum).zfill(5)
   outdir = simdir+'/output_' + outnumn_char
- 
-  aexp    = None
-  scale_L = None 
-  scale_d = None
-  scale_T = None 
-  simtime = None
-  with open(outdir+'/info_'+outnumn_char+'.txt' , 'r') as file:
-    for line in file:
-      if 'time' in line:
-        simtime = float(line.split()[2])
-      if 'aexp' in line:
-        aexp = float(line.split()[2])
-      if 'unit_l' in line:
-        scale_L = float(line.split()[2])
-      if 'unit_d' in line:
-        scale_d = float(line.split()[2])
-      if 'unit_t' in line:
-        scale_T = float(line.split()[2])
-        break
-  if(aexp == None or scale_L == None or scale_d == None or scale_T == None or simtime == None) :
-    raise ValueError(' units not read ')
-  Z           = 1.0/aexp - 1.0
-  scale_nH    = X/mH * scale_d
-  scale_M     = scale_d*scale_L*scale_L*scale_L
-  scale_vel   = scale_L/scale_T
-  scale_T2    = mH/kB * scale_vel*scale_vel
-
+  infofile = outdir+'/info_'+outnumn_char+'.txt' 
+  if(os.path.exists(infofile)) :
+    aexp    = None
+    scale_L = None 
+    scale_d = None
+    scale_T = None 
+    simtime = None
+    with open(infofile , 'r') as file:
+      for line in file:
+        if 'time' in line:
+          simtime = float(line.split()[2])
+        if 'aexp' in line:
+          aexp = float(line.split()[2])
+        if 'unit_l' in line:
+          scale_L = float(line.split()[2])
+        if 'unit_d' in line:
+          scale_d = float(line.split()[2])
+        if 'unit_t' in line:
+          scale_T = float(line.split()[2])
+          break
+    if(aexp == None or scale_L == None or scale_d == None or scale_T == None or simtime == None) :
+      raise ValueError(' units not read ')
+    Z           = 1.0/aexp - 1.0
+    scale_nH    = X/mH * scale_d
+    scale_M     = scale_d*scale_L*scale_L*scale_L
+    scale_vel   = scale_L/scale_T
+    scale_T2    = mH/kB * scale_vel*scale_vel
+  else : 
+    print("read_unit says: ", outdir, "doesn't exist")
 
 def merge_clump_props(simdir, outnum, NTask ) :
   outnumn_char = str(outnum).zfill(5)
@@ -291,89 +293,6 @@ def compare_sinkmasses(simdir_arr, label_arr, sinkid_arr) :
   print("Saving :" , imgname)
   plt.savefig(imgname)
 
-def compare_sinkdmdt(simdir_arr, label_arr, sinkid_arr) :
-  plt.xlabel('Redshift')
-  plt.ylabel('dmdsink_dt[Msun/Myr]')
-  plt.title('Sink accretion rate')
-  plt.yscale('log')
-
-  isink =0
-  imgname = "dmdt_z" 
-  for simdir in simdir_arr :
-    sinkid      = sinkid_arr[isink]
-    plabel      = label_arr[isink]
-    sink_dmBHdt = sink_prop_return(simdir, sinkid, 9)
-    aexp_arr    = sink_prop_return(simdir, sinkid, 10)
-
-    Ntime        = len(aexp_arr)
-    Z_arr        = []
-
-    for itime in range(0, Ntime):
-      aexp = aexp_arr[itime]
-      z    = 1.0/aexp -1.0
-      give_units(aexp)
-      sink_dmBHdt[itime]  = (scale_M/Msun)*(Myr/scale_T)*sink_dmBHdt[itime]
-      Z_arr.append(z)
-    plt.plot(Z_arr, sink_dmBHdt,  label=plabel, color=cbar[isink] ,marker='o', linestyle='-')
-    imgname = imgname + "_" + plabel
-    isink   = isink + 1
-  plt.legend(loc='best')
-  plt.gca().invert_xaxis()
-  plt.tight_layout()
-  imgname = imgname + ".png"
-  plt.savefig(imgname)
-
-def plot_sinksmasses(simdir, labl, Nsinks) :
-  for isink in range(1, Nsinks + 1):
-    sinkmass    = sink_prop_return(simdir, isink, 1)
-    aexp_arr    = sink_prop_return(simdir, isink, 10)
-  
-    Ntime       = len(aexp_arr)
-    Z_arr       = [] 
-
-    for itime in range(0, Ntime):
-      aexp = aexp_arr[itime]
-      z  = 1.0/aexp -1.0
-      give_units(aexp)
-      sinkmass[itime]   = (scale_M/Msun) * sinkmass[itime]
-      Z_arr.append(z)
-
-    plt.plot(Z_arr, sinkmass)
-  plt.xlabel('Redshift')
-  plt.ylabel('Msink[Msun')
-  plt.title('')
-  plt.yscale('log')
-  plt.gca().invert_xaxis()
-  plt.tight_layout()
-  imgname = "sinksmasses_z_" + labl  + ".png"
-  plt.savefig(imgname)
-
-
-def plot_sinkdmdt(simdir, labl, sinkid) :
-  sink_dmBHdt = sink_prop_return(simdir, sinkid, 9)
-  aexp_arr    = sink_prop_return(simdir, sinkid, 10)
-  
-  Ntime       = len(aexp_arr)
-  Z_arr       = [] 
-
-  for itime in range(0, Ntime):
-    aexp = aexp_arr[itime]
-    z  = 1.0/aexp -1.0
-    give_units(aexp)
-    sink_dmBHdt[itime]  = (scale_M/Msun)*(Myr/scale_T)*sink_dmBHdt[itime]
-    Z_arr.append(z)
-
-  plt.plot(Z_arr, sink_dmBHdt, label=labl, color=cbar[0] ,marker='o', linestyle='-')
-  plt.xlabel('Redshift')
-  plt.ylabel('dmdsink_dt[Msun/Myr]')
-  plt.title('')
-  plt.yscale('log')
-  plt.legend(loc='best')
-  plt.gca().invert_xaxis()
-  plt.tight_layout()
-  imgname = "dmdt_z_" + labl  + ".png"
-  plt.savefig(imgname)
-
 
 def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_comov) :
 
@@ -384,6 +303,7 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
   fig5, ax5 = plt.subplots()
   fig6, ax6 = plt.subplots()
   fig7, ax7 = plt.subplots()
+  fig8, ax8 = plt.subplots()
 
   isim =0
   for simdir in simdir_arr :
@@ -394,30 +314,34 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
     mstartot   = sink_prop_return(simdir, sinkid, 12)
     Nsinktot   = sink_prop_return(simdir, sinkid, 0)
     aexp_arr   = sink_prop_return(simdir, sinkid, 10)
+    sink_dmBHdt = sink_prop_return(simdir, sinkid, 9)
+
     if(status) :
-      Ntime              = len(aexp_arr)
-      Z_arr              = []
-      msinkfirst_clipped = []
-      msinktot_clipped   = []
-      mstartot_clipped   = []
-      msinktomstar       = []
-      Nsinktot_clipped   = []
-      nsinktot_clipped   = []
-      rhosinktot_clipped = []
+      Ntime               = len(aexp_arr)
+      Z_arr               = []
+      msinkfirst_clipped  = []
+      msinktot_clipped    = []
+      mstartot_clipped    = []
+      msinktomstar        = []
+      Nsinktot_clipped    = []
+      nsinktot_clipped    = []
+      rhosinktot_clipped  = []
+      sink_dmBHdt_clipped = []
       for itime in range(0, Ntime):
         aexp = aexp_arr[itime]
         z    = 1.0/aexp -1.0
-        if(z > 0.0) :
+        if(z > 8.0) :
           vol = pow ( boxlen_comov*aexp, 3 )
           give_units(aexp,boxlen_comov)
           #print(itime, scale_M/Msun)
-          msinkfirst_clipped.append (  (scale_M/Msun) * msinkfirst[itime]     )
+          msinkfirst_clipped.append (  (scale_M/Msun) * msinkfirst[itime] /( msinkfirst[0] * (scale_M/Msun) )* 1e5     )
           msinktot_clipped.append   (  (scale_M/Msun) * msinktot[itime]       )
           mstartot_clipped.append   (  (scale_M/Msun) * mstartot[itime]       )
           msinktomstar.append       (  msinktot[itime]/mstartot[itime]        )
           Nsinktot_clipped.append   (          Nsinktot[itime]                )
           nsinktot_clipped.append   (        Nsinktot[itime]/vol              )
           rhosinktot_clipped.append ( (scale_M/Msun) * (msinktot[itime]/vol)  )
+          sink_dmBHdt_clipped.append(  (scale_M/Msun) *( Myr/scale_T/1e6 ) * sink_dmBHdt[itime]   )
           Z_arr.append(z)
       ax1.plot(Z_arr, msinktot_clipped  ,  label=label_arr[isim], color=cbar_arr[isim], linestyle=linestyle_arr[isim])
       ax2.plot(Z_arr, mstartot_clipped  ,  label=label_arr[isim], color=cbar_arr[isim], linestyle=linestyle_arr[isim])
@@ -426,6 +350,7 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
       ax5.plot(Z_arr, nsinktot_clipped  ,  label=label_arr[isim], color=cbar_arr[isim], linestyle=linestyle_arr[isim])
       ax6.plot(Z_arr, rhosinktot_clipped,  label=label_arr[isim], color=cbar_arr[isim], linestyle=linestyle_arr[isim])
       ax7.plot(Z_arr, msinkfirst_clipped,  label=label_arr[isim], color=cbar_arr[isim], linestyle=linestyle_arr[isim])
+      ax8.plot(Z_arr, sink_dmBHdt_clipped,  label=label_arr[isim], color=cbar_arr[isim], linestyle=linestyle_arr[isim])
       isim   = isim + 1
     else :
       print("simdir :", simdir)
@@ -438,6 +363,7 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
   imgname_5 = "nsinktot_cmp.png"
   imgname_6 = "rhosinktot_cmp.png"
   imgname_7 = "msinkfirst_cmp.png"
+  imgname_8 = "dmdtsinkfirst_cmp.png"
 
   ax1.set_xlabel("Redshift")  
   ax1.set_ylabel("Msinktot[Msun]")
@@ -457,7 +383,7 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
 
   ax3.set_xlabel("Redshift")  
   ax3.set_ylabel("Msinktot/Mstartot")
-  ax3.set_title("Ratio of total sink mass to total star mass")
+  ax3.set_title("Ratio of total sink mass to total star mass in simulation box")
   ax3.set_yscale('log')
   ax3.legend(loc='best')
   fig3.gca().invert_xaxis()
@@ -495,6 +421,14 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
   fig7.gca().invert_xaxis()
   fig7.tight_layout()
 
+  ax8.set_xlabel("Redshift")  
+  ax8.set_ylabel("dMsink/dt[Msun/yr]")
+  ax8.set_title("dmdt of first sink")
+  ax8.set_yscale('log')
+  ax8.legend(loc='best')
+  fig8.gca().invert_xaxis()
+  fig8.tight_layout()
+
   print("Saving : ", imgname_1)
   fig1.savefig(imgname_1)
   fig1.clf()
@@ -523,7 +457,343 @@ def compare_sinkmasstot(simdir_arr, label_arr, cbar_arr, linestyle_arr, boxlen_c
   fig7.savefig(imgname_7)
   fig7.clf()
 
+  print("Saving : ", imgname_8)
+  fig8.savefig(imgname_8)
+  fig8.clf()
 
+
+def give_outnum_from_aexp(simdir, aexp_out) :
+
+  Z_out = 1.0/aexp_out - 1.0
+  outnum_dzmin = 1
+  dzmin = 9999.0
+  z_prev = -1
+  for outnum in range(1, 20) :
+    outnum_char = str(outnum).zfill(5)
+    outdir      = simdir + "/output_" + str(outnum_char)
+    if(os.path.exists(outdir)) :
+      read_units(simdir, outnum)
+      #print("z_out :", Z_out, Z, abs(Z - Z_out ), outnum)
+      if( abs(Z - Z_out) < 0.03 ) :
+        print("found exact outnum for the given redshift : ", outnum)
+        outnum_dzmin = outnum
+        break
+      if(dzmin > abs(Z - Z_out)) :
+        dzmin = abs(Z - Z_out)
+        outnum_dzmin = outnum
+        z_prev = Z
+    else :
+      print(outdir, "is the last snapshot")
+      break    
+  return [outnum_dzmin, z_prev]
+
+
+def plot_sink_pos_vs_z(simdir_arr, cbar_arr, label_arr, sinkid, boxlen_comov, relhalo, halonum_max) :
+
+  fig1, ax1 = plt.subplots()
+  fig2, ax2 = plt.subplots()
+  fig3, ax3 = plt.subplots()
+
+  isim=0
+  for simdir in simdir_arr :
+    xsink       = sink_prop_return(simdir, sinkid, 2)
+    ysink       = sink_prop_return(simdir, sinkid, 3)
+    zsink       = sink_prop_return(simdir, sinkid, 4)
+    msink       = sink_prop_return(simdir, sinkid, 1)
+    sink_dmBHdt = sink_prop_return(simdir, sinkid, 9)
+    aexp_arr    = sink_prop_return(simdir, sinkid, 10)    
+
+    if(relhalo) :
+      OZ        = give_outnum_from_aexp(simdir, aexp_arr[0])
+      outnum    = OZ[0]
+      print("outnum with closest redshift to spawn of sink :", outnum)
+      outnum_char    = str(outnum).zfill(5)
+      outdir        = simdir+'/output_' + outnum_char
+      halofile       = outdir + '/info_'+ outnum_char + "/halodata.csv"
+
+      if  (not os.path.exists(halofile) ) :
+        print("Halo catalog not found, creating one.......................") 
+        yt_funcs.create_halo_catalog(simdir, outnum, 0, 0)
+        yt_funcs.write_halos(simdir, outnum)
+      else :
+        print(halofile, "already exists")  
+      ##
+      ihalo = 0
+      drmin = 99999
+      halonum_drmin = 0
+      with open(halofile, 'r') as file:
+        for line in file:
+          if(ihalo < halonum_max-1) :
+            dx = xsink[0] - float(line.split()[1])
+            dy = ysink[0] - float(line.split()[2])
+            dz = zsink[0] - float(line.split()[3])
+            dr2  = dx*dx + dy*dy + dz*dz
+            if(drmin > dr2) :
+              drmin         = dr2
+              halonum_drmin = ihalo
+              halo_posx     = float(line.split()[1])
+              halo_posy     = float(line.split()[2])
+              halo_posz     = float(line.split()[3])  
+              halo_rvir     = float(line.split()[4])
+              halo_mass     = float(line.split()[5])
+              rvir          = (halo_rvir/1000.0) /boxlen_comov
+          else :
+            break    
+          ihalo = ihalo + 1
+      print("nearest halo center :", math.sqrt(dr2), math.sqrt(dr2)/rvir,  halo_mass/1e9, ihalo)    
+    else : 
+      halo_posx = 0.0
+      halo_posy = 0.0
+      halo_posz = 0.0  
+      halo_rvir = -1
+      rvir      = 1
+      halo_mass = -1
+
+    dr_arr          = []
+    z_arr           = []
+    msink_arr       = []
+    sink_dmBHdt_arr = []
+    itime    = 0
+    for aexp in aexp_arr :
+      give_units(aexp, boxlen_comov)     
+      z = 1.0/aexp - 1.0
+      if(z > 7.0) :
+        dx    = xsink[itime] - halo_posx
+        dy    = ysink[itime] - halo_posy
+        dz    = zsink[itime] - halo_posz
+        dr = math.sqrt( dx*dx + dy*dy + dz*dz )
+        dr_arr.append(dr/rvir )
+        msink_arr.append(msink[itime] * (scale_M/Msun) * 0.677)
+        sink_dmBHdt_arr.append( (scale_M/Msun)*(Myr/scale_T)*sink_dmBHdt[itime] )
+        z_arr.append(z) 
+      itime = itime + 1  
+
+    ax1.plot(z_arr, dr_arr         , label=label_arr[isim], color=cbar_arr[isim], linestyle='-')
+    ax2.plot(z_arr, msink_arr      , label=label_arr[isim], color=cbar_arr[isim], linestyle='-')
+    ax3.plot(z_arr, sink_dmBHdt_arr, label=label_arr[isim], color=cbar_arr[isim], linestyle='-')  
+    isim = isim + 1 
+
+  ax1.set_xlabel("redshift")
+  if(relhalo) :
+    ax1.set_ylabel(r"$ \left| (\vec{r}_{sink} - \vec{r}_{halo}) \right| / Rvir_{halo} $") 
+    ax1.set_title(f"sink position relative to its nearest halo center, sinkid : {sinkid}") 
+  else :
+    ax1.set_ylabel("sink position in code units")
+    ax1.set_title(f"sink position in code units, sinkid : {sinkid}")
+  ax1.legend()
+  fig1.tight_layout()  
+  fig1.gca().invert_xaxis()
+  figname = "sink_dr_" + str(sinkid) + ".png"
+  print("saving :", figname)
+  fig1.savefig(figname)
+
+  ax2.set_xlabel("redshift")
+  ax2.set_ylabel(" Msink [Msun] ") 
+  ax2.set_title(f"sink mass, sinkid : {sinkid}") 
+  ax2.legend()
+  fig2.tight_layout()  
+  fig2.gca().invert_xaxis()
+  figname = "sink_mass_" + str(sinkid) + ".png"
+  print("saving :", figname)
+  fig2.savefig(figname)
+
+  ax3.set_xlabel("Redshift")  
+  ax3.set_ylabel("dMsink/dt[Msun/yr]")
+  ax3.set_title(f"sink mass accretion rate, sinkid : {sinkid}")
+  ax3.set_yscale('log')
+  ax3.legend(loc='best')
+  fig3.gca().invert_xaxis()
+  fig3.tight_layout()
+  figname = "sink_dmdt_" + str(sinkid) + ".png"
+  print("saving :", figname)
+  fig3.savefig(figname)
+
+def give_nearest_ihalo(simdir, outnum, posx, posy, posz, boxlen_comov, halonum_max):
+  outnum_char    = str(outnum).zfill(5)
+  outdir         = simdir+'/output_' + outnum_char
+  halofile       = outdir + '/info_'+ outnum_char + "/halodata.csv"
+
+  if  (not os.path.exists(halofile) ) :
+    print("Halo catalog not found, creating one.......................") 
+    yt_funcs.create_halo_catalog(simdir, outnum, 0, 0)
+    yt_funcs.write_halos(simdir, outnum)
+  #else :
+    #print(halofile, "already exists")  
+  ##
+  ihalo = 0
+  drmin = 99999
+  ihalo_drmin = 0
+  with open(halofile, 'r') as file:
+    for line in file:
+      if(ihalo < halonum_max-1) :
+        dx = posx - float(line.split()[1])
+        dy = posy - float(line.split()[2])
+        dz = posz - float(line.split()[3])
+        dr2  = dx*dx + dy*dy + dz*dz
+        if(drmin > dr2) :
+          drmin         = dr2
+          halo_posx   = float(line.split()[1])
+          halo_posy   = float(line.split()[2])
+          halo_posz   = float(line.split()[3])  
+          halo_rvir   = float(line.split()[4])/1000.0/boxlen_comov
+          halo_mass   = float(line.split()[5])
+          ihalo_drmin = ihalo
+      else :
+        break    
+      ihalo = ihalo + 1
+  print("nearest halo center :", ihalo_drmin, ihalo, math.sqrt(drmin)/halo_rvir)
+  return [halo_posx, halo_posy, halo_posz, halo_rvir, halo_mass, ihalo_drmin]
+
+def give_haloprops(simdir, outnum, halonum, boxlen_comov) :
+  outnum_char = str(outnum).zfill(5)
+  outdir      = simdir+'/output_' + outnum_char
+  halofile    = outdir + '/info_'+ outnum_char + "/halodata.csv"
+ 
+  if(os.path.exists(halofile)) :
+    ihalo = 0
+    with open(halofile, 'r') as file:
+      for line in file:
+        if(ihalo < halonum-1) :
+          ihalo = ihalo + 1
+        else :
+          break
+    halo_posx   = float(line.split()[1])
+    halo_posy   = float(line.split()[2])
+    halo_posz   = float(line.split()[3])  
+    halo_rvir   = float(line.split()[4])
+    halo_mass   = float(line.split()[5])
+    redshift    = float(line.split()[7])
+    rvir        = halo_rvir/1000.0/boxlen_comov #Mpccm/h
+    return [halo_posx, halo_posy, halo_posz, rvir, halo_mass]
+  else :
+    print("give_haloprops says :", halofile, "doesn't exist")
+    return [-1,-1,-1,-1,-1]
+  
+def plot_sink_relpos_vs_z(simdir_arr, cbar_arr, label_arr, sinkid, boxlen_comov, halonum_max, outnum_max) :
+
+  fig1, ax1 = plt.subplots()
+  fig2, ax2 = plt.subplots()
+  fig3, ax3 = plt.subplots()
+
+  isim=0
+  for simdir in simdir_arr :
+    xsink         = sink_prop_return(simdir, sinkid, 2)
+    ysink         = sink_prop_return(simdir, sinkid, 3)
+    zsink         = sink_prop_return(simdir, sinkid, 4)
+    msink         = sink_prop_return(simdir, sinkid, 1)
+    sink_dmBHdt   = sink_prop_return(simdir, sinkid, 9)
+    aexp_arr      = sink_prop_return(simdir, sinkid, 10)    
+
+    ##
+    OZ        = give_outnum_from_aexp(simdir, aexp_arr[0])
+    outnum    = OZ[0]
+    z_prev    = OZ[1]
+    read_units(simdir, outnum+1)
+    z_next = Z
+    print("outnum with closest redshift to spawn of sink :", 1.0/aexp_arr[0] - 1.0, z_prev, z_next, outnum)
+    halo_attrb = give_nearest_ihalo(simdir, outnum, xsink[0], ysink[0], zsink[0], boxlen_comov, halonum_max)
+    #halo_attrb    = give_haloprops(simdir, outnum, nearest_ihalo, boxlen_comov)
+    halo_posx     = halo_attrb[0]
+    halo_posy     = halo_attrb[1]
+    halo_posz     = halo_attrb[2]
+    rvir          = halo_attrb[3]
+    ##
+
+    dr_arr          = []
+    z_arr           = []
+    msink_arr       = []
+    sink_dmBHdt_arr = []
+    z_snap_arr      = []
+    dr_snap_arr     = []
+    itime    = 0
+
+    if(outnum_max[isim] > 0) :
+      z_snap_arr.append( 1.0/aexp_arr[0] - 1.0)
+      dx_snap  = xsink[0] - halo_posx
+      dy_snap  = ysink[0] - halo_posy
+      dz_snap  = zsink[0] - halo_posz  
+      dr_snap  = dx_snap*dx_snap + dy_snap*dy_snap + dz_snap*dz_snap
+      dr_snap_arr.append(math.sqrt(dr_snap)/rvir)
+    
+
+
+    for aexp in aexp_arr :
+      give_units(aexp, boxlen_comov)     
+      z = 1.0/aexp - 1.0
+      if(z > 7.0) :
+        if(z- z_next  < z_prev -z and outnum < outnum_max[isim]) :
+          z_snap_arr.append(z)
+          z_prev = z_next 
+          outnum = outnum + 1
+          read_units(simdir, outnum+1)
+          z_next = Z
+          print("new halo center : ", z_prev, z, z_next, z_next-z, z-z_prev, outnum)
+          halo_attrb = give_nearest_ihalo(simdir, outnum, xsink[itime], ysink[itime], zsink[itime], boxlen_comov, halonum_max)
+          #halo_attrb    = give_haloprops(simdir, outnum, nearest_ihalo, boxlen_comov)
+          halo_posx     = halo_attrb[0]
+          halo_posy     = halo_attrb[1]
+          halo_posz     = halo_attrb[2]
+          rvir          = halo_attrb[3]
+          dx_snap  = xsink[itime] - halo_posx
+          dy_snap  = ysink[itime] - halo_posy
+          dz_snap  = zsink[itime] - halo_posz  
+          dr_snap  = dx_snap*dx_snap + dy_snap*dy_snap + dz_snap*dz_snap
+          dr_snap_arr.append(math.sqrt(dr_snap)/rvir)
+          
+        dx    = xsink[itime] - halo_posx
+        dy    = ysink[itime] - halo_posy
+        dz    = zsink[itime] - halo_posz
+        dr = math.sqrt( dx*dx + dy*dy + dz*dz )
+        dr_arr.append(dr/rvir )
+        give_units(aexp, boxlen_comov)
+        #print("dr :",scale_M, Msun)
+        msink_arr.append(msink[itime] * scale_M/Msun)
+        sink_dmBHdt_arr.append( sink_dmBHdt[itime] *(scale_M/Msun)*(Myr/scale_T) )
+        z_arr.append(z) 
+      itime = itime + 1  
+
+    ax1.plot(z_arr, dr_arr          , label=label_arr[isim], color=cbar_arr[isim], linestyle='-')
+    if(outnum_max[isim] > 0) :
+      ax1.scatter(z_snap_arr, dr_snap_arr, color=cbar_arr[isim], marker='o')
+    ax2.plot(z_arr, msink_arr       , label=label_arr[isim], color=cbar_arr[isim], linestyle='-')
+    ax3.plot(z_arr, sink_dmBHdt_arr , label=label_arr[isim], color=cbar_arr[isim], linestyle='-')  
+    isim = isim + 1 
+
+  ax1.set_xlabel("redshift")
+  if(outnum_max[0] > 0) :
+    ax1.set_ylabel(r"$ \left| (\vec{R}_{sink}(z) - \vec{R}_{halo}(z)) \right| / R_{vir}(z) $") 
+    ax1.set_title(f" (R_sink(z) - R_halo(z))/R_vir(z) ..... [for sinkid : {sinkid}]")
+  else :
+    ax1.set_ylabel(r"$ \left| (\vec{R}_{sink}(z) - \vec{R}_{halo, initial}) \right| / R_{vir, initial} $") 
+    ax1.set_title(f"(R_sink(z) - R_halo_initial)/R_vir_initial ..... [for sinkid : {sinkid}]")
+
+  ax1.legend()
+  fig1.tight_layout()  
+  fig1.gca().invert_xaxis()
+  figname = "sink_dr_" + str(sinkid) + ".png"
+  print("saving :", figname)
+  fig1.savefig(figname)
+
+  ax2.set_xlabel("redshift")
+  ax2.set_ylabel(" Msink [Msun] ") 
+  ax2.set_title(f"sink mass, sinkid : {sinkid}") 
+  ax2.legend()
+  fig2.tight_layout()  
+  fig2.gca().invert_xaxis()
+  figname = "sink_mass_" + str(sinkid) + ".png"
+  print("saving :", figname)
+  fig2.savefig(figname)
+
+  ax3.set_xlabel("Redshift")  
+  ax3.set_ylabel("dMsink/dt[Msun/yr]")
+  ax3.set_title(f"sink mass accretion rate, sinkid : {sinkid}")
+  ax3.set_yscale('log')
+  ax3.legend(loc='best')
+  fig3.gca().invert_xaxis()
+  fig3.tight_layout()
+  figname = "sink_dmdt_" + str(sinkid) + ".png"
+  print("saving :", figname)
+  fig3.savefig(figname)
 
 def compare_sinkstarmass_vs_z(simdir_arr, label_arr,boxlen_comov) :
   fig1, ax1 = plt.subplots()
@@ -742,7 +1012,7 @@ def plot_dens(simdir, outnum, binname, plotsinks, boxlen_comov):
   
   plt.savefig(figname, dpi=300)
 
-def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotstars, overwrite_densbin, overwrite_sink, overwrite_star, boxlen_comov, dir, var, fullbox):
+def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotsfr, overwrite_densbin, overwrite_sink, overwrite_star, boxlen_comov, dir, var, fullbox):
   read_units(simdir, outnum)
 #  print("scale_M : ", scale_M)
 #  print("scale_L : ", scale_L)
@@ -754,13 +1024,12 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
   scale_E = scale_M*scale_vel*scale_vel
 #  print("scale_E : ", scale_E)
 
-
   aexp = 1.0/(1.0 + Z)
   Mpch = 3.0856e24 / 0.67739997
   boxlen_comov =  scale_L/(aexp*Mpch)
   print("Lbox_mpc/h : ", boxlen_comov)
   print("")
-  comoving = True
+  comoving = False
   if(comoving) :
     aexp = 1.0
 
@@ -769,17 +1038,17 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
     plotcolor = 'viridis'
     typ       =  1
     cbarlabel = r'density$ [ \textrm{gm}/\textrm{cm}^3 ] $ '
-    val_low   = 1e-28
+    val_low   = 1e-27
     val_high  = 1e-23  
   elif(var == 'temp') :
     gamma     = 1.4
     scale_var = (gamma - 1.0)*scale_T2
+    print("scale_T2 : ", scale_var)
     plotcolor = 'twilight_shifted'
-    #plotcolor  = 'binary' 
     typ       =  5
     cbarlabel = 'Temperature[K]'
     val_low   = 10.0
-    val_high  = 1e5  
+    val_high  = 1e6  
   elif(var == 'sfr') :
     scale_var =  (scale_M/scale_T) * (yr/Msun)
     plotcolor = 'viridis'
@@ -829,8 +1098,8 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
     halo_mass = float(line.split()[5])
     rvir    =   aexp*(halo_rvir/1000.0) /boxlen_comov
     print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Halo Rvir[kpc] : ", rvir*1000.0*boxlen_comov, halo_mass/1e10)
-    print('halo pos :', halo_posx, halo_posy, halo_posz)
-    zoomout  = 2.0
+
+    zoomout  = 4.0
     xmin = max(halo_posx - zoomout*rvir,0)
     xmax = min(halo_posx + zoomout*rvir,1)
     ymin = max(halo_posy - zoomout*rvir,0)
@@ -850,11 +1119,6 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
     if(zbox < ybox and zbox < xbox):
       rbox = min( halo_posz - zmin, zmax - halo_posz )
 
-    print('xmin, xmax: ', xmin, xmax )
-    print('ymin, ymax: ', ymin, ymax )
-    print('zmin, zmax: ', zmin, zmax )
-    print('xbox, ybox, zbox, rbox : ', xbox, ybox, zbox, 2.0*rbox)
-
     if(rbox > 0):  
       xmin = halo_posx - rbox
       xmax = halo_posx + rbox
@@ -867,12 +1131,6 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
       zbox = zmax-zmin
     else :
       rbox = min( halo_posx - xmin, xmax - halo_posx )   
-
-    print('xmin, xmax: ', xmin, xmax )
-    print('ymin, ymax: ', ymin, ymax )
-    print('zmin, zmax: ', zmin, zmax )
-    print('xbox, ybox, zbox, rbox : ', xbox, ybox, zbox, 2.0*rbox)
-
 
   extent  = [(xmin-halo_posx)*boxlen_comov, (xmax-halo_posx)*boxlen_comov, (ymin-halo_posy)*boxlen_comov, (ymax-halo_posy)*boxlen_comov ]
   xbox = xmax-xmin
@@ -915,59 +1173,14 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
   #dens_trans_clipped = np.clip(dens_trans, val_low, val_high)
   dens_trans_clipped = dens_trans
   plt.imshow(dens_trans_clipped, cmap=plotcolor, norm=LogNorm(vmin=val_low, vmax=val_high),extent = extent, origin='lower' ,label=f'Z = {Z:.2f}' )
-  plt.text(0.95, 0.95, f'Z = {Z:.2f}', ha='right', va='top', color='black',fontweight='bold', fontsize=14, transform=plt.gca().transAxes)
+  plt.text(0.95, 0.95, f'Z = {Z:.2f}', ha='right', va='top', color='white',fontweight='bold', fontsize=14, transform=plt.gca().transAxes)
+  plt.title(simtyp)
   plt.subplots_adjust(left=0.0, right=1.0, top=0.99, bottom=0.1) 
   #plt.gca().set_aspect('equal', adjustable='box')
   cbar = plt.colorbar(pad=0.001)
   cbar.set_label(cbarlabel)
   #cbar.ax.yaxis.labelpad = -30  # Adjust this value as needed
 
-  phaseplot=True
-  if(phaseplot) :
-    print('making phase plot of the given region cen : (', halo_posx, halo_posy, halo_posz, '), rad: ',  rbox*boxlen_comov, 'Mpccm/h')
-    ds        = yt.load(outdir)
-    #Z         = ds.current_redshift
-    my_sphere = ds.sphere([halo_posx, halo_posy, halo_posz], (rbox*boxlen_comov, "Mpccm/h"))
-    nH_halo   = np.array( my_sphere['gas', 'number_density'] )
-    T_halo    = np.array( my_sphere['gas', 'temperature'] )
-    pp        = yt.PhasePlot(my_sphere, (('gas', 'number_density')), ("gas", "temperature"), ("gas", "mass"))
-    pp.set_unit(("gas", "mass"), "Msun")
-    pp.set_unit(("gas", "number_density"), "1/cm**3")
-    pp.set_ylim( 1e1, 1e9 )
-    pp.set_xlim( 1e-7,1e2 )
-    pp.set_zlim( ("gas", "mass"), 1e0, 4e6 )
-    #plot.annotate_title(midstr + " \n " + f"z:{Z:.2f}")
-    pp_imgname= 'temp_tn.png'
-    print("Writing: ", pp_imgname)
-    pp.save(pp_imgname)
-
-    if(fullbox) :   
-      imgname_z  = "tn_"+simtyp + "_z"+ str(Zint) + '_fullbox.png'
-      TnH_filename = outdir + '/info_'+ outnum_char + "/TnH.csv"
-    else :
-      imgname_z  = "tn_"+simtyp + "_z"+ str(Zint) + '_' + str(halonum) + '.png' 
-      TnH_filename = outdir + '/info_'+ outnum_char + '/TnH_'+ str(halonum) + '.csv'
-
-    image = Image.open(pp_imgname)
-    draw = ImageDraw.Draw(image)
-    myfont = ImageFont.truetype('/usr/share/fonts/truetype/DejaVuSansMono-Bold.ttf', 42)
-    text = simtyp + " \n " + f"z:{Z:.2f}"
-    text_color = (255, 0, 0)
-    draw.text((730, 36), text, font=myfont, fill=(0, 0, 0))
-    print("Saving plot: ", imgname_z)
-    image.save(imgname_z)
-    
-    print('creating :', TnH_filename)
-    with open(TnH_filename, 'w') as TnHfile:
-      for itemp in range(0, len(nH_halo)) :
-        log_nH = math.log10(nH_halo[itemp]) 
-        log_T  = math.log10(T_halo[itemp])
-        TnHfile.write(f"{log_nH}\t{log_T}\n")
-        if(itemp < 5) :
-          print(log_nH, log_T)
-    print('..... done')        
-
-    
   plot_somepoints = False
   if(plot_somepoints):
     print("plotting some points ", halo_posx, halo_posy, halo_posz)
@@ -986,12 +1199,15 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
           somex.append(px)
           somey.append(py)
           somez.append(pz)
-    plt.scatter(somex, somey, marker='*', color="red" ,s=1)  
+    plt.scatter(somex, somey, marker='.', color="red" ,s=1)  
 
-  if(plotstars == True) :
+  plotstars = False
+  if(plotsfr == True) :
     xstar = []
     ystar = []
     zstar = []
+    tstar = []
+    mstar = []
     nstar=0
     starfile = outdir + "/starpos.csv"
     if ( (not os.path.exists(starfile) ) or (os.path.exists(starfile) and overwrite_star == True) ) :  
@@ -1008,24 +1224,24 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
         posy = float(line.split(',')[3]) 
         posz = float(line.split(',')[4]) 
         time  = float(line.split(',')[8])
-        if( posx>xmin and posx<xmax and posy>ymin and posy<ymax and posz>zmin and posz<zmax and time > 10) :
+        if( posx>xmin and posx<xmax and posy>ymin and posy<ymax and posz>zmin and posz<zmax and time > 0.0) :
           star_posx = (posx - halo_posx)*boxlen_comov 
           star_posy = (posy - halo_posy)*boxlen_comov
           star_posz = (posz - halo_posz)*boxlen_comov
           xstar.append( star_posx )
           ystar.append( star_posy ) 
           zstar.append( star_posz )
-          #print("star pos :", nstar, star_posy, star_posz, time)
+          tstar.append(    time   )
+          mstar.append(    mass   )
           nstar=nstar+1
-    if(nstar > 0) :    
+    if(nstar > 0 and plotstars == True) :   
+      print('ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ')
       if(dir == 'z') :  
         plt.scatter(xstar, ystar, marker='.', color="yellow" ,s=1)
       elif (dir == 'x') :
         plt.scatter(ystar, zstar, marker='.', color="yellow" ,s=1)
       elif (dir == 'y') :
         plt.scatter(xstar, zstar, marker='.', color="yellow" ,s=1)
-    else :
-      print("No stars in the given region")
 
   if(plotsinks == True) :
     xsink = []
@@ -1052,6 +1268,7 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
           xsink.append( sink_posx )
           ysink.append( sink_posy ) 
           zsink.append( sink_posz )
+          print("SINK id in this projection :", float(line.split(',')[0]))
           nsink=nsink+1
     if(nsink > 0) :    
       if(dir == 'z') :  
@@ -1107,15 +1324,43 @@ def plot_halodens(simdir, simtyp, outnum, halonum, plotsinks, plotcircle, plotst
     plt.ylabel(r' $\textrm{Z} \left[  \textrm{Mpccm/h} \right] $')
 
   if(fullbox) :   
-    figname =  "proj_"+var+"_"+simtyp + "_z"+ str(Zint) + '_fullbox.png'
+    figname =  var+"_"+simtyp + "_z"+ str(Zint) + '_fullbox.png'
   else :
-    figname =  "proj_"+var+"_"+simtyp + "_z"+ str(Zint) + '_' + str(halonum) + '.png'  
-  print("saving :", figname)  
+    figname =  var+"_"+simtyp + "_z"+ str(Zint) + '_' + str(halonum) + '.png'  
+  print("saving :", figname, plotsfr)  
   plt.savefig(figname, dpi=200,bbox_inches='tight')
   plt.clf()
+
+  if(plotsfr) :
+    nbins = 64
+    sfr_arr =  np.zeros(nbins)
+    time_arr = np.zeros(nbins)
+    tbig = max(tstar)*(1.0 + 0.00001)  #Myr
+    dtbin = tbig/float(nbins)
+    print("dtbin, tage_max :", dtbin, min(tstar), max(tstar))
+    # starage in Myr
+    ipart = 0
+    for ipart in range(0, len(tstar)) :
+      starage = tstar[ipart]
+      if(starage >= 0) : 
+        ibin       = int(starage/tbig*float(nbins))
+        sfr_arr[ibin]  = sfr_arr[ibin] + mstar[ipart]*scale_M/Msun
+    for ibin in range (0, nbins) :
+      time_arr[ibin] =  ( float(ibin) + 0.5 ) * dtbin
+      sfr_arr[ibin]  = sfr_arr[ibin]/dtbin/1e6 
+
+    plt.xlabel("Time[Myr]") 
+    plt.ylabel("SFR[Msun/yr]")
+    plt.plot(time_arr, sfr_arr,  label='' ,marker='o', linestyle='-')
+    if(fullbox) :   
+      figname = "sfr_" + simtyp + "_z"+ str(Zint) + '_fullbox.png'
+    else :
+      figname = "sfr_"+simtyp + "_z"+ str(Zint) + '_' + str(halonum) + '.png'  
+    print("Saving : ", figname) 
+    plt.savefig(figname, dpi=200,bbox_inches='tight')
+    plt.clf()
+
   #plt.savefig('output_figure.png', bbox_inches='tight')
-
-
 
 def sink_star_halo_mass(simdir, outnum, overwrite_sink, overwrite_star, overwrite_halo, plotsinkvsstar ,boxlen_comov):
   read_units(simdir, outnum)
@@ -1289,6 +1534,10 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
     fig6, ax6 = plt.subplots()
     fig7, ax7 = plt.subplots()
     fig8, ax8 = plt.subplots()
+    fig9, ax9 = plt.subplots()
+    fig10, ax10 = plt.subplots()
+    fig11, ax11 = plt.subplots()
+    fig12, ax12 = plt.subplots()
 
   isim=0
   for simdir in simdir_arr:
@@ -1421,7 +1670,8 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
           dmdbh.append(dmdt)
           dmedd.append(dedd)
           nsink=nsink+1
-  
+      ax9.hist(np.log10(msink) , bins=16, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')    
+      #ax9.hist(binned_x, binned_xy[1], color=cbar_arr[isim], linestyle=linestyle_arr[isim], label=simtyp_arr[isim])
     print("nstar, nsink, Nhalo : ", nstar, nsink, Nhalo)
   
     ihalo = 0
@@ -1430,17 +1680,20 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
     mstar_halo = []
     mstar_to_mhalo = []
     sfr_halo = []
+    rhost_halo = []
 
     #sink related 
-    msink_halo = []
-    rhost_halo = []
-    dmdbh_halo = []
-    dmedd_halo = []
-    dbhtoedd_halo = []
-    vsigma_halo = []
-    
-    mstar_halo_withsink = []
-    mhost_halo_withsink = []
+    if(plotsinks):
+      msink_halo = []
+      Nsink_halo = []
+      drsink_halo = []
+      dmdbh_halo = []
+      dmedd_halo = []
+      dbhtoedd_halo = []
+      vsigma_halo = []
+      mstar_halo_withsink = []
+      mhost_halo_withsink = []
+
     with open(halofile, 'r') as file:
       for line in file:
         if(ihalo < halonum and ihalo < Nhalo)  :
@@ -1492,17 +1745,22 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
             if(plotsinks):      
               msinktot = 0 
               nsinktot = 0
+              drsinktot = 0
               dmdbhtot = 0
               dmdedtot = 0
               for isink in range(0,nsink): 
                 sink_dx = xsink[isink] - halo_posx
                 sink_dy = ysink[isink] - halo_posy
                 sink_dz = zsink[isink] - halo_posz
-                sink_dr = sink_dx*sink_dx + sink_dy*sink_dy + sink_dz*sink_dz
+                sink_dr2 = sink_dx*sink_dx + sink_dy*sink_dy + sink_dz*sink_dz
                 #print("isink :", isink, nsink, sink_dr, rvir2)
-                if(sink_dr <= rvir2) :
+                rgalaxy =  (50.0 / 1000.0) * (aexp / boxlen_comov)
+                rgalaxy2 = rgalaxy*rgalaxy
+                if(sink_dr2 <= (0.5)*(0.5)*rvir2) :
+                  #print("     sink_dr :", math.sqrt(sink_dr2), rgalaxy, math.sqrt(sink_dr2)/rgalaxy)
                   #print("isink tot :", isink, nsink)
                   nsinktot = nsinktot + 1.0
+                  drsinktot = drsinktot + math.sqrt(sink_dr2)
                   msinktot = msinktot + msink[isink]
                   dmdbhtot = dmdbhtot + dmdbh[isink]
                   dmdedtot = dmdedtot + dmedd[isink]
@@ -1511,6 +1769,8 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
                 mstar_halo_withsink.append(mstartot)
                 mhost_halo_withsink.append(halo_mass)
                 msink_halo.append(msinktot)
+                Nsink_halo.append(nsinktot)
+                drsink_halo.append( aexp*(boxlen_comov*1000.0/0.607)*drsinktot/float(nsinktot))
                 sinktostarmass.append(msinktot/mstartot)
                 dmdbhtot = dmdbhtot/nsinktot
                 dmdedtot = dmdedtot/nsinktot
@@ -1563,10 +1823,18 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
 
     if(plotsinks):
       ax5.scatter(mhost_halo_withsink, msink_halo    , marker='o', color=cbar_arr[isim], s=20,label=simtyp_arr[isim])
+      ax12.scatter(mstar_halo_withsink, msink_halo    , marker='o', color=cbar_arr[isim], s=20,label=simtyp_arr[isim])
       #binned_xy  = bindata(mhost_halo_withsink, msink_halo, 8, True, 2)
       #binned_x   = binned_xy[0]
       #ax5.plot(binned_x, binned_xy[1], color=cbar[isim], linestyle='-', label=simtyp)
       #ax5.fill_between(binned_x, binned_xy[3], binned_xy[2], color=cbar[isim], alpha=0.25)
+
+      #mstar_halo_arr = [pow(10,8.5), pow(10,12)]
+      #mBH_halo_arr = [pow(10, 5.8), pow(10, 9.81)] 
+      mstar_halo_arr = [pow(10,7.4), pow(10,11.2)]  
+      mBH_halo_arr = [pow(10, 4), pow(10, 8)]
+      ax12.plot( mstar_halo_arr ,mBH_halo_arr, linestyle='--', color='gray', label='Reines, Volonteri 2015')
+
 
       ax6.scatter(mhost_halo_withsink, sinktostarmass, marker='o', color=cbar_arr[isim], s=20,label=simtyp_arr[isim])
       #binned_xy  = bindata(mhost_halo_withsink, sinktostarmass, 8, True, 2)
@@ -1581,7 +1849,16 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
       #ax7.fill_between(binned_x, binned_xy[3], binned_xy[2], color=cbar[isim], alpha=0.25)
 
       ax8.scatter(msink_halo         , vsigma_halo   , marker='o', color=cbar_arr[isim], s=20, label=simtyp_arr[isim])
- 
+
+      ax10.scatter(mhost_halo_withsink, Nsink_halo    , marker='o', color=cbar_arr[isim], s=20,label=simtyp_arr[isim])
+
+      #ax11.scatter(mhost_halo_withsink, drsink_halo    , marker='o', color=cbar_arr[isim], s=20,label=simtyp_arr[isim])
+      binned_xy  = bindata(mhost_halo_withsink, drsink_halo, 8, True, 1)
+      binned_x   = binned_xy[0]
+      ax11.plot(binned_x, binned_xy[1], color=cbar_arr[isim], linestyle=linestyle_arr[isim], label=simtyp_arr[isim])
+      ax11.fill_between(binned_x, binned_xy[3], binned_xy[2], color=cbar_arr[isim], alpha=0.25)
+     
+     
     isim = isim + 1
      
   imgname_1 = "mstar_vs_mhalo_z" + str(Zint) + ".png"
@@ -1619,7 +1896,6 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
   logsfr_arr_p   = np.zeros(npoints)
   logsfr_arr_m   = np.zeros(npoints)
   logsfr_arr     = np.zeros(npoints)
-  
   for logMstar in logMstar_arr : 
     logsfr_arr[ipoint]   = (0.80        - 0.017              )*logMstar - (6.487        - 0.039             ) #Iyer 2018
     logsfr_arr_p[ipoint] = (0.80 +0.029 - 0.017 +0.010*tuniv )*logMstar - (6.487 -0.282 - 0.039 -0.008*tuniv) #Iyer 2018
@@ -1631,7 +1907,6 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
     logsfr_arr_p[ipoint] = 10**logsfr_arr_p[ipoint]
     logsfr_arr_m[ipoint] = 10**logsfr_arr_m[ipoint]  
     logMstar_arr[ipoint] = 10**logMstar_arr[ipoint]
-
   ax3.plot( logMstar_arr ,logsfr_arr, linestyle='--', color='gray', label='Iyer 2018')
 
 #  ax3.plot( logMstar_arr ,logsfr_arr_p, linestyle='--', color='gray', label='')
@@ -1697,18 +1972,53 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
 
   if(plotsinks):
     imgname_5 = "msink_vs_mhalo_z" + str(Zint) + ".png"
+    imgname_12 = "msink_vs_mstarhalo_z" + str(Zint) + ".png"
+    imgname_10 = "Nsink_vs_mhalo_z" + str(Zint) + ".png"
+    imgname_11 = "drsink_vs_mhalo_z" + str(Zint) + ".png"
+
     imgname_6 = "msinktomstar_vs_mhalo_z" + str(Zint) + ".png"
     imgname_7 = "dmbhtodedd_vs_mhalo_z" + str(Zint) + ".png"
     imgname_8 = "m_sigma" + str(Zint) + ".png"
+    imgname_9 = "sink_imf" + str(Zint) + ".png"
+
 
     ax5.set_xlabel("Mhalo[Msun]")  
     ax5.set_ylabel("Msink[Msun]")
-    ax5.set_title("Total BH mass per Halo at z={:.2f}".format(Z))
+    ax5.set_title("Total sink mass per Halo at z={:.2f}".format(Z))
     ax5.set_xscale('log')
     ax5.set_yscale('log')
     ax5.legend(loc='best')
     ax5.set_xlim(1e8, 2e10)
     fig5.tight_layout()
+
+    ax12.set_xlabel("Mstellar[Msun]")  
+    ax12.set_ylabel("Msink[Msun]")
+    ax12.set_title("local Msink vs Mstar per Halo at z={:.2f}".format(Z))
+    ax12.set_xscale('log')
+    ax12.set_yscale('log')
+    ax12.legend(loc='best')
+    ax12.set_xlim(1e4, 1e12)
+    fig12.tight_layout()
+
+
+    ax10.set_xlabel("Mhalo[Msun]")  
+    ax10.set_ylabel("Nsink")
+    ax10.set_title("Number of sinks per Halo at z={:.2f}".format(Z))
+    ax10.set_xscale('log')
+    ax10.set_yscale('log')
+    ax10.legend(loc='best')
+    ax10.set_xlim(1e8, 2e10)
+    fig10.tight_layout()
+
+    ax11.set_xlabel("Mhalo[Msun]")  
+    ax11.set_ylabel("drsink[Kpc]")
+    ax11.set_title("Average BH distance from center of Halo at z={:.2f}".format(Z))
+    ax11.set_xscale('log')
+    ax11.set_yscale('log')
+    ax11.legend(loc='best')
+    ax11.set_xlim(1e8, 2e10)
+    fig11.tight_layout()
+
 
     ax6.set_xlabel("Mhalo[Msun]")  
     ax6.set_ylabel("Msink/Mstar")
@@ -1736,6 +2046,14 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
     ax8.legend(loc='best')
     fig8.tight_layout()
 
+    ax9.set_xlabel("log10(Msink[Msun])")  
+    ax9.set_ylabel("")
+    ax9.set_title("Sink mass function at z={:.2f}".format(Z))
+    ax9.set_xscale('log')
+    ax9.set_yscale('log')
+    ax9.legend(loc='best')
+    fig9.tight_layout()
+
     print("Saving : ", imgname_5)  
     fig5.savefig(imgname_5)
     fig5.clf()
@@ -1748,6 +2066,19 @@ def haloprops(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, linestyle_arr, halon
     print("Saving : ", imgname_8)
     fig8.savefig(imgname_8)
     fig8.clf()
+    print("Saving : ", imgname_9)
+    fig9.savefig(imgname_9)
+    fig9.clf()
+    print("Saving : ", imgname_10)
+    fig10.savefig(imgname_10)
+    fig10.clf()
+    print("Saving : ", imgname_11)
+    fig11.savefig(imgname_11)
+    fig11.clf()
+    print("Saving : ", imgname_12)
+    fig12.savefig(imgname_12)
+    fig12.clf()
+
 
 #outstat = 1 for mean and std deviation
 #outstat = 2 for median and range   
@@ -1873,6 +2204,72 @@ def bindata(xarr, yarr, nbin, logdata, outstat):
 
   return [x_out, y_out, ym_out, yp_out]   
 
+def read_mfblog(simdir, overwrite) :
+  print("simdir :", simdir)
+  mfblog_all = simdir  + "/mfblog_all.txt" 
+  if  (not  os.path.exists(mfblog_all) or overwrite ) :
+    if(os.path.exists(mfblog_all) and overwrite) :
+      command = "rm " + mfblog_all
+      print('command :', command)
+      os.system(command)
+
+    command = "touch " + mfblog_all
+    print('command :', command)
+    os.system(command)
+
+    nlogfile = 1 
+    for ifile in range(1,5) :
+      simlog = simdir + "/simulation_" + str(ifile) + ".log"
+      mfblog = simdir + "/mfblog_"     + str(ifile) + ".txt"
+      if(os.path.exists(simlog)) :
+        command = "grep -rH 'MFB z= ' " +  simlog + " > " + mfblog
+        print('command :', command)
+        print('writing :',  mfblog)
+        os.system(command)
+        command = "cat " + mfblog + " >> " + mfblog_all
+        print('command :', command)
+        os.system(command)
+        nlogfile = nlogfile + 1
+      else :
+        simlog = simdir + "/simulation" + ".log"
+        mfblog = simdir + "/mfblog"     + ".txt"
+        command = "grep -rH 'MFB z= ' " +  simlog + " > " + mfblog
+        print('command :', command)
+        print('writing :',  mfblog)
+        os.system(command)
+        command = "cat " + mfblog + " >> " + mfblog_all
+        print('command :', command)
+        os.system(command)
+        nlogfile = nlogfile + 1
+        break
+  else : 
+    print(mfblog_all, 'exists')
+
+  z_arr  = []
+  N_arr  = []
+  nH_arr = []
+  T_arr  = []
+  Z_arr  = []
+  dx_arr = []
+  E_arr  = []
+
+  with open(mfblog_all, 'r') as file:  
+    lines  = file.readlines()
+    Nlines = len(lines)
+    for line in lines:
+      file_path, data = line.split(':')
+      parts           = data.split()
+      tag             = parts[0] + parts[1]
+      if(float(parts[2]) > 8.4) :
+        z_arr.append  (  float(parts[2])      )
+        N_arr.append  (  float(parts[4])      )
+        nH_arr.append (  10**float(parts[6])      )
+        T_arr.append  (  10**float(parts[7])      )
+        Z_arr.append  (  10**float(parts[8])  )
+        dx_arr.append (  10**float(parts[10]) )
+        E_arr.append  (  10**float(parts[10]) )
+  return [nH_arr, T_arr]
+
 def plot_mfblog(simdir_arr, simtyp_arr, cbar_arr, overwrite) :
 
   fig1, ax1 = plt.subplots()
@@ -1946,12 +2343,12 @@ def plot_mfblog(simdir_arr, simtyp_arr, cbar_arr, overwrite) :
           Z_arr.append  (  10**float(parts[8])  )
           dx_arr.append (  10**float(parts[10]) )
           E_arr.append  (  10**float(parts[10]) )
-      ax1.hist(z_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax2.hist(N_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax3.hist(nH_arr, bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax4.hist(T_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax5.hist(Z_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax6.hist(E_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax1.hist(z_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax2.hist(N_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax3.hist(nH_arr, bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax4.hist(T_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax5.hist(Z_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax6.hist(E_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
       isim = isim + 1
         #print("iline :", parts[0], parts[1] , parts[2], parts[4], parts[5], parts[6], parts[7], parts[8], parts[9], parts[10]  )
 
@@ -2090,6 +2487,105 @@ def plot_halohist(simdir_arr, simtyp_arr, outnum_arr, cbar_arr, halonum) :
   fig2.savefig(imgname_2)
   fig2.clf()
  
+def read_sfrlog(simdir,  overwrite) :
+  print("simdir :", simdir)
+  mfblog_all = simdir  + "/sfrlog_all.txt" 
+  if  (not  os.path.exists(mfblog_all) or overwrite ) :
+    if(os.path.exists(mfblog_all) and overwrite) :
+      command = "rm " + mfblog_all
+      print('command :', command)
+      os.system(command)
+
+    command = "touch " + mfblog_all
+    print('command :', command)
+    os.system(command)
+
+    nlogfile = 1 
+    for ifile in range(1,5) :
+      simlog = simdir + "/simulation_" + str(ifile) + ".log"
+      mfblog = simdir + "/sfrlog_"     + str(ifile) + ".txt"
+      if(os.path.exists(simlog)) :
+        command = "grep -rH 'SF z=' " +  simlog + " > " + mfblog
+        print('command :', command)
+        print('writing :',  mfblog)
+        os.system(command)
+        command = "cat " + mfblog + " >> " + mfblog_all
+        print('command :', command)
+        os.system(command)
+        nlogfile = nlogfile + 1
+      else :
+        simlog = simdir + "/simulation" + ".log"
+        mfblog = simdir + "/sfrlog"     + ".txt"
+        command = "grep -rH 'SF z=' " +  simlog + " > " + mfblog
+        print('command :', command)
+        print('writing :',  mfblog)
+        os.system(command)
+        command = "cat " + mfblog + " >> " + mfblog_all
+        print('command :', command)
+        os.system(command)
+        nlogfile = nlogfile + 1
+        break
+  else : 
+    print(mfblog_all, 'exists')
+      
+  z_arr  = []
+  N_arr  = []
+  nH_arr = []
+  T_arr  = []
+  Z_arr  = []
+  dx_arr = []
+  E_arr  = []
+
+  with open(mfblog_all, 'r') as file: 
+    lines  = file.readlines()     
+    for line in lines:
+      #SF z=   7.61010  nH=   1.650 T=  -0.904 N=     1 eps_ff=   0.13134 alpha=   0.00000
+      parts = line.split()
+      if(float(parts[2]) > 8.4) :
+        z_arr.append  (  float(parts[2])      )
+        nH_arr.append (  10**float(parts[4])      )
+        T_arr.append  (  10**float(parts[6])      )
+  return[nH_arr, T_arr]
+
+def read_starfiles(simdir, outnum ,overwrite) :
+  nproc = 200
+  outnum_char = str(outnum).zfill(5)
+  outdir = simdir+'/output_' + outnum_char
+  if( os.path.exists(outdir) ) :
+    read_units(simdir, outnum)
+    numlines = 0 
+    nH_star = []
+    T_star  = []
+    for iproc in range(1, nproc+1) :
+      iproc_char = str(iproc).zfill(5)
+      starfile   = outdir + "/stars_" + outnum_char + ".out" + iproc_char
+      if(os.path.exists(starfile)) :
+        with open(starfile, 'r') as file:
+          lines  = file.readlines()
+          nline = 0 
+          for line in lines :
+            if(nline > 0) :
+              parts = line.split()
+              ndens = float(parts[10])*scale_nH
+              temp = float(parts[14])
+              nH_star.append(ndens)
+              T_star.append(temp)
+              #print(numlines, ndesn, T)
+            nline = nline + 1  
+            numlines = numlines +1
+      else  :
+        print(starfile, "doesnt exist")       
+  else :
+    print(outdir, "doesnt exist") 
+  return [nH_star, T_star]             
+
+
+
+
+
+
+
+
 def plot_sfrlog(simdir_arr, simtyp_arr, cbar_arr, overwrite) :
 
   fig1, ax1 = plt.subplots()
@@ -2155,9 +2651,9 @@ def plot_sfrlog(simdir_arr, simtyp_arr, cbar_arr, overwrite) :
           z_arr.append  (  float(parts[2])      )
           nH_arr.append (  float(parts[4])      )
           T_arr.append  (  float(parts[6])      )
-      ax1.hist(z_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax2.hist(nH_arr , bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
-      ax3.hist(T_arr, bins=256, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax1.hist(z_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax2.hist(nH_arr, bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
+      ax3.hist(T_arr , bins=256, density=True, color=cbar_arr[isim], label=simtyp_arr[isim], edgecolor=cbar_arr[isim], histtype='step')
       isim = isim + 1
         #print("iline :", parts[0], parts[1] , parts[2], parts[4], parts[5], parts[6], parts[7], parts[8], parts[9], parts[10]  )
 

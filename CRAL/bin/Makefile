@@ -18,12 +18,12 @@ SOLVER=hydro
 # Patch
 PATCH=
 # Use RT? 1=Yes, 0=No
-RT=0
+RT=1
 # Use MPI? 1=Yes, 0=No
 MPI=1
 MPIF90 = mpiifort
 # Root name of executable
-EXEC = ramses_eq_smbh
+EXEC = ramses_rt_smbh
 # Use Grackle cooling? 1=Yes, 0=No
 GRACKLE=0
 # Number of metal species
@@ -31,7 +31,7 @@ NMETALS=0
 # ATON flages: Uncomment to enable ATON
 ATON_FLAGS = #-DATON
 # Number of ions for RT
-NIONS=0
+NIONS=3
 # Number of photon groups for RT
 NGROUPS=0
 # Number of cosmic ray groups

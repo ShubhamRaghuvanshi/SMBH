@@ -40,6 +40,10 @@ subroutine star_formation(ilevel)
   integer ::ntot,ntot_all,nstar_corrected,ncell
   logical ::ok_free
   real(dp)::d,x,y,z,u,v,w,e,tg,zg,zg_ox
+    !shubham
+  real(dp)::estar,Tkstar
+  !shbham 
+
   real(dp)::mstar,mstar1,dstar,tstar,nISM,nCOM=0.0d0,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
   real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
   real(dp)::ul,ur,fl,fr,trgv,alpha0
@@ -346,6 +350,10 @@ subroutine star_formation(ilevel)
            if(ok(i))then
               ! Compute mean number of events
               d=uold(ind_cell(i),1)
+              !shubham 
+              estar  = uold(ind_cell(i),5) 
+              Tkstar = (gamma - 1.0d0) * estar * scale_T2  
+              !shubham  
               
               if(KMT09)then  !Agertz: calculate f_H2, which enters mcell below.
                  Zscale=1
@@ -446,8 +454,8 @@ subroutine star_formation(ilevel)
               if(nstar(i)>0)then
                  ntot=ntot+1
                  if(sf_log_properties) then
-399                  format('SF z= ',f9.5,1x,' nH= ',f7.3,' N= ',I5,' eps_ff= ',f9.5,' alpha= ',f9.5)
-                     write(*,399) 1./aexp-1,log10(d*scale_nH),nstar(i),sfr_ff(i),alpha_fk(i)
+399                  format('SF z= ',f9.5,1x,' nH= ',f7.3, ' T= ',f7.3  ,' N= ',I5,' eps_ff= ',f9.5,' alpha= ',f9.5)
+                     write(*,399) 1./aexp-1,log10(d*scale_nH), log10(Tkstar) ,nstar(i),sfr_ff(i),alpha_fk(i)
                  endif
                  if(SFdiagnostics) then
 666                  format('SF z= ',f9.5,1x,' nH= ',f7.3,' N= ',I5,' eps_ff= ',f9.5,' alpha= ',f9.5)

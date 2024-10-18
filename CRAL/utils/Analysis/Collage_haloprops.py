@@ -3,16 +3,11 @@ from PIL import Image, ImageEnhance
 W  = 1920
 H  = 640
 
- 
 new_sfr_vs_mstar   = Image.new("RGBA", (int(W),int(H)))
-new_sfr_vs_mhalo   = Image.new("RGBA", (int(W),int(H)))
-new_mstar_vs_mhalo = Image.new("RGBA", (int(W),int(H)))
-new_mstar_to_mhalo = Image.new("RGBA", (int(W),int(H)))
 
-
-img1 = Image.open("sfr_vs_mstar_z12.png")
-img2 = Image.open("sfr_vs_mstar_z11.png")
-img3 = Image.open("sfr_vs_mstar_z10.png")
+img1 = Image.open("sfr_vs_mstar_z10.png")
+img2 = Image.open("sfr_vs_mstar_z9.png")
+img3 = Image.open("sfr_vs_mstar_z8.png")
 
 img1 = img1.resize((int(W/3),int(H)))
 img2 = img2.resize((int(W/3),int(H)))
@@ -25,9 +20,10 @@ figname = "collage_sfr_vs_mstar.png"
 print("saving :",figname )
 new_sfr_vs_mstar.save(figname)
 
-img4 = Image.open("sfr_vs_mhalo_z12.png")
-img5 = Image.open("sfr_vs_mhalo_z11.png")
-img6 = Image.open("sfr_vs_mhalo_z10.png")
+'''
+img4 = Image.open("sfr_vs_mhalo_z10.png")
+img5 = Image.open("sfr_vs_mhalo_z9.png")
+#img6 = Image.open("sfr_vs_mhalo_z10.png")
 img4 = img4.resize((int(W/3),int(H)))
 img5 = img5.resize((int(W/3),int(H)))
 img6 = img6.resize((int(W/3),int(H)))
@@ -70,7 +66,4 @@ new_mstar_to_mhalo.paste(img12, (int(2*W/3),0))
 figname = "collage_mstar_to_mhalo.png"
 print("saving :", figname)
 new_mstar_to_mhalo.save(figname)
-
-
-
-
+'''

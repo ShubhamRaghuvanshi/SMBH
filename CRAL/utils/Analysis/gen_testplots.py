@@ -1,33 +1,101 @@
 import yt_funcs
 import cfuncs
 
-Dir_sim='/ptmp/mpa/sraghu/noneq/' 
+'''
+#1 drag 
+Dir_sim_gasdrag ='/ptmp/mpa/sraghu/sink_gasdrag' 
 
+simdir_0        = "/ptmp/mpa/sraghu/star"
+simdir_1        = Dir_sim_gasdrag + "/star_sink"
+simdir_2        = Dir_sim_gasdrag + "/star_sn_sink"
+simdir_3        = Dir_sim_gasdrag + "/star_sink_agn"
+simdir_4        = Dir_sim_gasdrag + "/star_sn_sink_agn"
+simtyp_arr     = ['star', 'star_sink', 'star_sn_sink', 'star_sink_agn', 'star_sn_sink_agn']
+simdir_arr     = [simdir_0, simdir_1, simdir_2, simdir_3, simdir_4 ]
+cbar_arr       = ['m', 'r', 'g', 'b', 'y' ]
+linestyle_arr  = ['-', '-', '-', '-', '-']
+#mbar_arr       = ['*'     , '^'     , 's'     ,  'h'     , 's']
+sfr_outnum_arr = [11, 10,16,10, 16]
+halonum_arr    = [-1, -1,-1,-1, -1]
+outnum_1       = [ ]
+#outnum_2       = [ 12, 10, 8 ]
+#outnum_3       = [ 12, 10, 8 ]
+#outnum_4       = [ 12, 10, 8 ]
+#outnum_arr     = [ outnum_1, outnum_2, outnum_3, outnum_4]
+'''
+
+'''
+#1 drag vs no drag 
+Dir_sim_nodrag ='/ptmp/mpa/sraghu/sink_nodrag' 
+simdir_2       = Dir_sim_nodrag + "/star_sn_sink"
+simdir_3       = Dir_sim_nodrag + "/star_sink_agn"
+simdir_4       = Dir_sim_nodrag + "/star_sn_sink_agn"
+Dir_sim_gasdrag ='/ptmp/mpa/sraghu/sinktest_gasdrag' 
+#Dir_sim_gasdrag = Dir_sim_nodrag
+simdir_5        = Dir_sim_gasdrag + "/star_sn_sink"
+simdir_6        = Dir_sim_gasdrag + "/star_sink_agn"
+simdir_7        = Dir_sim_gasdrag + "/star_sn_sink_agn"
+simtyp_arr     = ['star_sn_sink(nodrag)',  'star_sn_sink(gasdrag)',   'star_sink_agn(nodrag)',  'star_sink_agn(gasdrag)',  'star_sn_sink_agn(nodrag)',  'star_sn_sink_agn(gasdrag)']
+simdir_arr     = [simdir_2              ,  simdir_5               , simdir_3                 , simdir_6                 ,   simdir_4                 ,  simdir_7                   ]
+cbar_arr       = ['r'                   ,  'r'                    , 'g'                      , 'g'                      ,   'b'                      ,  'b'                        ]
+linestyle_arr  = ['-'                   ,  '--'                   , '-'                      , '--'                     ,  '-'                       , '--']
+#mbar_arr       = ['*'     , '^'     , 's'     ,  'h'     , 's'     ]
+#sfr_outnum_arr = [11, 10,16,12, 16]
+#halonum_arr    = [-1, -1,-1,-1, -1]
+outnum_1       = [ ]
+#outnum_2       = [ 12, 10, 8 ]
+#outnum_3       = [ 12, 10, 8 ]
+#outnum_4       = [ 12, 10, 8 ]
+#outnum_arr     = [ outnum_1, outnum_2, outnum_3, outnum_4]
+'''
+
+
+'''
+Dir_sim='/ptmp/mpa/sraghu/sink_nodrag/' 
 print("Dir_sim :",Dir_sim)
+simdir_1       = "/u/sraghu/sim/SHUB/b256/sn_eq"
+simdir_2       = "/u/sraghu/sim/SHUB/b256/sn_neq"
+simdir_3       = "/ptmp/mpa/sraghu/tests_nosink/sn_neq_18"
+simtyp_arr     = ['star+sn_eq_lowres', 'star+sn_neq_lowres', 'star+sn_neq_highres' ]
+simdir_arr     = [simdir_1, simdir_2, simdir_3]
+cbar_arr       = ['r'     , 'g'     , 'b']
+linestyle_arr  = [ '-'    , '-'     , '-']
+mbar_arr       = ['*'     , '^'     , '^']
+sfr_outnum_arr = [13,13,13]
+halonum_arr    = [-1, -1, -1]
+outnum_1       = []
+outnum_2       = []
+outnum_arr     = []
+'''
 
-simdir_1='/u/sraghu/sim/SHUB/b256/sn_eq'
-simdir_2='/u/sraghu/sim/SHUB/b256/sn_neq'
-simdir_3='/u/sraghu/sim/SHUB/b256/sn_neq_18'
-simdir_4='/u/sraghu/sim/SHUB/b256/sn_neq_lightstar'
 
-simtyp_arr    = ['sn_eq', 'sn_neq', 'sn_neq_highres', 'sn_neq_lightstar']
+simdir_1       = "/ptmp/mpa/sraghu/sink_nodrag/star_sn_sink"
+simdir_2       = "/ptmp/mpa/sraghu/sink_gasdrag/star_sn_sink"
+simtyp_arr     = ['star+sn+sink(nodrag)', 'star+sn+sink(gasdrag)' ]
+simdir_arr     = [simdir_1, simdir_2]
+cbar_arr       = ['r'     , 'g'     ]
+linestyle_arr  = [ '-'    , '-'     ]
+mbar_arr       = ['*'     , '^'     ]
+sfr_outnum_arr = [17,16]
+#sfr_outnum_arr = [-1,-1]
+#halonum_arr    = [-1, -1]
+outnum_1       = [16]
+outnum_2       = [15]
+outnum_arr     = [outnum_1, outnum_2]
+
+
+
+
+#simtyp_arr    = ['sn_eq', 'sn_neq', 'sn_neq_highres', 'sn_neq_lightstar']
+#simtyp_arr    = ['star_sn_sink', 'star_sink_agn', 'star_sn_sink_agn']
+
+
 #prop_arr      = ['sfr', 'hmf' ,  'dens_proj', 'temp_proj' , 'phaseplot']#,  'globalsink_vs_z',  'haloprops']
+prop_arr = ['haloprops']
 
-prop_arr = ['temp_proj']
-
-simdir_arr     = [simdir_1, simdir_2, simdir_3, simdir_4]#, simdir_4]
-cbar_arr       = ['m'     ,'r'      , 'g'     ,  'b'    ]#, 'b'     , 'y'     ]#, 'm'     ]#, 'm', 'c', 'k']
-linestyle_arr  = ['-'     , '-'     , '-'     ,  '-']#, '-'     , '-'     ]
-mbar_arr       = ["o"     , "^"     , "s"     ,  'h']#, "h"     , "D"     ]
-sfr_outnum_arr = [11      , 11      , 11      ,  '11']#,8        ,9        ]#,8        ]
-             #z8  #z9
-outnum_1 = [ 10  , 9 ]
-outnum_2 = [ 11  , 9 ]
-outnum_3 = [ 11  , 9 ]
-outnum_4 = [ 10  , 9 ]
 Nout     = len(outnum_1)
 
-outnum_arr = [ outnum_1, outnum_2, outnum_3, outnum_4 ]
+
 
 
 for prop in prop_arr :
@@ -36,15 +104,28 @@ for prop in prop_arr :
     #compare SFR
     plotanal=False
     plotdata=True
-    overwrite=False
+    overwrite=True
+    physical = True
+    fullbox = True
     #write star files
     iout=0
     for simdir in simdir_arr:
       outnum = sfr_outnum_arr[iout]
-      yt_funcs.write_starfile(simdir, outnum, overwrite)
+      if(halonum_arr[iout] > 0) :
+        halo_attrb = yt_funcs.give_haloprops(simdir, outnum, halonum_arr[iout], physical, False)
+        center = halo_attrb[0]
+        radius = halo_attrb[1]
+        mass   = halo_attrb[2] 
+        fullbox = False     
+      else :
+        center = [-1,-1,-1]
+        radius = -1  
+        mass = -1e9
+      print("halo center, radius, mass : ", center, radius, mass/1e9)  
+      yt_funcs.write_starfile(simdir, outnum, overwrite, radius, center)
       iout = iout+1
     # plot sfr  
-    yt_funcs.compare_sfr(simdir_arr, simtyp_arr ,sfr_outnum_arr, cbar_arr, linestyle_arr ,plotanal, plotdata )
+    yt_funcs.compare_sfr(simdir_arr, simtyp_arr ,sfr_outnum_arr, cbar_arr, linestyle_arr ,plotanal, plotdata, fullbox )
   if(prop=='hmf') :
     # write halo catalog 
     overwrite=False
@@ -62,22 +143,50 @@ for prop in prop_arr :
   if(prop=='dens_proj') :
     boxlen_comov=6.77
     overwrite=False
+    physical = False
+    fullbox = False
+    projdir = 'y'
+    
     for iout in range(0,Nout) :
       isim=0
       for simdir in simdir_arr:
         outnum = outnum_arr[isim][iout]
         simtyp = simtyp_arr[isim]
-        yt_funcs.plot_proj_gasdens(simdir, outnum, simtyp, boxlen_comov, overwrite)
+        if(fullbox or halonum_arr[iout] < 0) :
+          radius = -1
+          center = [0.5, 0.5, 0.5]
+        else :
+          halo_attrb = yt_funcs.give_haloprops(simdir, outnum, halonum_arr[iout], physical, False)
+          center = halo_attrb[0]
+          radius = halo_attrb[1]
+          aexp   = halo_attrb[3]
+          #if(physical) :
+          #  radius = radius / aexp  
+        yt_funcs.plot_proj_gasdens(simdir, outnum, simtyp, radius, center, projdir, boxlen_comov)
         isim = isim + 1
   if(prop=='temp_proj') :
     boxlen_comov=6.77
     overwrite=False
+    physical = False
+    fullbox = True
+    projdir = 'z'
+    
     for iout in range(0,Nout) :
       isim=0
       for simdir in simdir_arr:
         outnum = outnum_arr[isim][iout]
         simtyp = simtyp_arr[isim]
-        yt_funcs.plot_proj_gastemp(simdir, outnum, simtyp, boxlen_comov, overwrite)
+        if(fullbox or halonum_arr[iout] < 0) :
+          radius = -1
+          center = [0.5, 0.5, 0.5]
+        else :
+          halo_attrb = yt_funcs.give_haloprops(simdir, outnum, halonum_arr[iout], physical, False)
+          center = halo_attrb[0]
+          radius = halo_attrb[1]
+          aexp   = halo_attrb[3]
+          #if(physical) :
+          #  radius = radius / aexp  
+        yt_funcs.plot_proj_gastemp(simdir, outnum, simtyp, radius, center, projdir, boxlen_comov)
         isim = isim + 1
   if(prop=='metalicity_proj') :
     boxlen_comov=6.77
@@ -101,7 +210,9 @@ for prop in prop_arr :
         isim = isim + 1
   if(prop=='globalsink_vs_z')  :
     boxlen_comov = 6.77
-    cfuncs.compare_sinkmasstot(simdir_arr, simtyp_arr, cbar_arr, linestyle_arr, boxlen_comov)
+    #cfuncs.compare_sinkmasstot(simdir_arr, simtyp_arr, cbar_arr, linestyle_arr, boxlen_comov)
+    #cfuncs.plot_sink_pos_vs_z(simdir_arr, cbar_arr, simtyp_arr, 4, boxlen_comov, True, 100)
+    cfuncs.plot_sink_relpos_vs_z(simdir_arr, cbar_arr, simtyp_arr, 1, boxlen_comov, 100, sfr_outnum_arr)
   if(prop=='haloprops') :
     overwrite_sink = False
     overwrite_star = False
@@ -116,11 +227,7 @@ for prop in prop_arr :
         haloprop_outnum_arr.append(outnum)
         isim = isim + 1
       print('haloprop_outnum_arr :', haloprop_outnum_arr) 
-      cfuncs.haloprops(simdir_arr, simtyp_arr, haloprop_outnum_arr, cbar_arr, linestyle_arr, 2000, boxlen_comov, overwrite_star, overwrite_sink, plotsinks)
-
-
-  
-
+      cfuncs.haloprops(simdir_arr, simtyp_arr, haloprop_outnum_arr, cbar_arr, linestyle_arr, 20000, boxlen_comov, overwrite_star, overwrite_sink, plotsinks)
 
 
 

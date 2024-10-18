@@ -122,29 +122,32 @@ def compare_hmf(simdir_arr, simname_arr, cbar_arr, mbar_arr, outnum_arr, fitfunc
 
 
 #star functions 
-def write_starfile(simdir, outnum, overwrite):
+def write_starfile(simdir, outnum, overwrite, radius, center):
   outnum_char      = str(outnum).zfill(5)
   outdir           = simdir+'/output_' + outnum_char
   sfr_file         = outdir + "/SFR_" +  outnum_char + ".out" 
   print("sfr_outdir : ", outdir)
 
-  if(overwrite) :
-    command = f'rm {sfr_file}'
-    print("eceuting", command)
-    os.system(command)   
+  #if(overwrite) :
+  #  command = f'rm {sfr_file}'
+  #  print("executing", command)
+  #  os.system(command)   
 
-  if( not os.path.exists(sfr_file) ) :     
+  if( not os.path.exists(sfr_file) or overwrite ) :     
     ds         = yt.load(outdir)
     ad         = ds.all_data()
     mass       = ad[("star", "particle_mass")].in_units('Msun')
     age        = ad[("star", "age")].in_units('Myr')
     ct         = ad[("star", "particle_birth_time")]
-    #Z        = ds.current_redshift
-
+    Z        = ds.current_redshift
+   
     threshold  = ds.quan(10.0, "Myr")
     mass_old   = mass[age > threshold]
     ct_old     = ct[age > threshold]
-    sp         = ds.all_data()
+    if(radius < 0) :
+      sp        = ds.all_data()
+    else :
+      sp        =   ds.sphere(center, (radius, "Mpccm/h"))
 
     sfr  = StarFormationRate(ds, star_mass=mass_old, star_creation_time=ct_old, volume=sp.volume())
     #sfr = StarFormationRate(ds, star_mass=mass_old)
@@ -171,7 +174,7 @@ def read_star_prop(simdir, outnum, propnum):
 
 
 # compare sfr from with same outnum at same redshift
-def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,plotanal, plotdata ): 
+def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,plotanal, plotdata, fullbox ): 
 
   #plt.xscale('log')
   
@@ -180,7 +183,12 @@ def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,pl
   #ax1.set_xscale('log')
   ax1.set_xlabel("Redshift(z)")
   ax1.set_ylabel(r"SFR  [$M_\odot$/yr/Mpcc] ")
-  
+
+  if(fullbox ) :
+    ax1.set_title("global SFRD vs redshift")
+  else :
+    ax1.set_title("SFRD vs redshift for one halo")
+
   mass_thres = 0.0 
   tage_thres = 0.0
   iout=0
@@ -204,7 +212,7 @@ def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,pl
           tage = float(line.split()[0]) 
           z    = float(line.split()[2])
           mass = float(line.split()[5])
-          if(tage > tage_thres and z > 0.0 and mass>0): 
+          if(tage > tage_thres and z > 8.0 and mass>0): 
             sfrcc = float(line.split()[4])
             aexp  =  1.0/(1.0+z)
             Redshift.append(z)
@@ -216,7 +224,7 @@ def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,pl
     #ax2 = ax1.secondary_xaxis('top', functions=(lambda x: 13.6*x/(1.0+x), lambda x: x/(13.6-x ) ))
     iout = iout + 1    
 
-  if(plotanal) :
+  if(plotanal and fullbox) :
     Z_anal   =   [8,10,12,14,16]
     SFR_anal =   []
     SFR_aniket_bursty=[-1.96, -2.33, -2.77,  ]
@@ -227,7 +235,7 @@ def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,pl
     ax1.plot(Z_anal, SFR_anal, linestyle="-"  ,color='k', label="Madau, Dickinson")
 
 
-  if(plotdata) :
+  if(plotdata and fullbox) :
     #z_arr     = [8   ,  9   , 10.5 , 12   , 13.25, 16]
     #logsfrd   = [-2.3, -2.61, -2.75, -3.23, -3.53, -3.59]
     #err_p = [0, 0.18, 0, 0.29, 0, 0.33]
@@ -266,7 +274,7 @@ def compare_sfr(simdir_arr, simname_arr ,outnum_arr, cbar_arr, linestyle_arr ,pl
   plt.clf()
 
 
-def plot_proj_gasdens(simdir, outnum, simtyp, boxlen_comov, overwrite): 
+def plot_proj_gasdens(simdir, outnum, simtyp, radius, center, projdir, boxlen_comov): 
   outnum_char  = str(outnum).zfill(5)
   outdir       = simdir+'/output_' + outnum_char
   print("outdir :",outdir)
@@ -277,29 +285,38 @@ def plot_proj_gasdens(simdir, outnum, simtyp, boxlen_comov, overwrite):
   Zint2 = round(Z)
   imgname_z    =  "gasdens_proj_" + simtyp + "_z"+ str(Zint2) +  ".png"
 
-  if( not os.path.exists(imgname_z) or overwrite) :
-    p  = yt.ProjectionPlot(ds, "z", ("gas", "density"), weight_field=("gas", "density"),width=(boxlen_comov,"Mpccm/h"))
-    #p.set_cmap(("gas", "temperature"), "twilight_shifted")
-    p.set_xlabel("cMpc/h")
-    p.set_ylabel("cMpc/h")
-    p.set_zlim( ("gas", "density"), 1e-28, 1e-23 )
-    p.annotate_title(simtyp)
-    p.save(imgname)
+  if(radius <= 0) :
+    radius = boxlen_comov/2.0
+
+  p  = yt.ProjectionPlot(ds, projdir, ("gas", "density"), weight_field=("gas", "density"),width=(2.0*radius,"Mpccm/h"))
+
+  if(radius > 0) :
+    if(projdir == 'z')   :
+      p.set_center(    (center[0], center[1])  )
+    elif(projdir == 'x') :
+      p.set_center(    (center[1], center[2])  )
+    elif(projdir == 'y') :
+      p.set_center(    (center[2], center[0])  )
+    else :
+      raise ValueError("Invalid direction for projection")              
+  p.set_cmap(("gas", "density"), "viridis")
+  p.set_xlabel("cMpc/h")
+  p.set_ylabel("cMpc/h")
+  p.set_zlim( ("gas", "density"), 1e-27, 1e-23 )
+  p.annotate_title(simtyp)
+  p.save(imgname)
   
-    image = Image.open(imgname)
-    draw = ImageDraw.Draw(image)
-    myfont = ImageFont.truetype('/usr/share/fonts/truetype/DejaVuSansMono-Bold.ttf', 42)
-    text = f"Z:{Z:.2f}"
-    text_color = (255, 0, 0)
-    draw.text((730, 36), text, font=myfont, fill=(0, 0, 0))
+  image = Image.open(imgname)
+  draw = ImageDraw.Draw(image)
+  myfont = ImageFont.truetype('/usr/share/fonts/truetype/DejaVuSansMono-Bold.ttf', 42)
+  text = f"Z:{Z:.2f}"
+  text_color = (255, 0, 0)
+  draw.text((730, 36), text, font=myfont, fill=(0, 0, 0))
 
-    print("Saving plot: ", imgname_z)
-    image.save(imgname_z)
-  else :
-    print(imgname_z, "already exists")  
+  print("Saving plot: ", imgname_z)
+  image.save(imgname_z)
 
-
-def plot_proj_gastemp(simdir, outnum, simtyp, boxlen_comov, overwrite): 
+def plot_proj_gastemp(simdir, outnum, simtyp, radius, center, projdir, boxlen_comov): 
   outnum_char  = str(outnum).zfill(5)
   outdir       = simdir+'/output_' + outnum_char
   print("outdir :",outdir)
@@ -307,28 +324,39 @@ def plot_proj_gastemp(simdir, outnum, simtyp, boxlen_comov, overwrite):
   
   ds = yt.load(outdir)
   Z  = ds.current_redshift
-  Zint2 = round(Z,2)
+  Zint2 = round(Z)
   imgname_z    =  "gastemp_proj_" + simtyp + "_z"+ str(Zint2) +  ".png"
 
-  if( not os.path.exists(imgname_z) or overwrite) :
-    p  = yt.ProjectionPlot(ds, "z", ("gas", "temperature"), weight_field=("gas", "density"),width=(boxlen_comov,"Mpccm/h"))
-    p.set_cmap(("gas", "temperature"), "twilight_shifted")
-    p.set_xlabel("cMpc/h")
-    p.set_ylabel("cMpc/h")
-    p.set_zlim( ("gas", "temperature"), 1e1, 1e5 )
-    p.annotate_title(simtyp)
-    p.save(imgname)
+  if(radius <= 0) :
+    radius = boxlen_comov/2.0
+
+  p  = yt.ProjectionPlot(ds, projdir, ("gas", "temperature"), weight_field=("gas", "density"),width=(2.0*radius,"Mpccm/h"))
+
+  if(radius > 0) :
+    if(projdir == 'z')   :
+      p.set_center(    (center[0], center[1])  )
+    elif(projdir == 'x') :
+      p.set_center(    (center[1], center[2])  )
+    elif(projdir == 'y') :
+      p.set_center(    (center[2], center[0])  )
+    else :
+      raise ValueError("Invalid direction for projection")              
+  p.set_cmap(("gas", "temperature"), "twilight_shifted")
+  p.set_xlabel("cMpc/h")
+  p.set_ylabel("cMpc/h")
+  p.set_zlim( ("gas", "temperature"), 1e1, 1e6 )
+  p.annotate_title(simtyp)
+  p.save(imgname)
   
-    image = Image.open(imgname)
-    draw = ImageDraw.Draw(image)
-    myfont = ImageFont.truetype('/usr/share/fonts/truetype/DejaVuSansMono-Bold.ttf', 42)
-    text = f"Z:{Z:.2f}"
-    text_color = (255, 0, 0)
-    draw.text((730, 36), text, font=myfont, fill=(255, 255, 255))
-    print("Saving plot: ", imgname_z)
-    image.save(imgname_z)
-  else :
-    print(imgname_z, "already exists")  
+  image = Image.open(imgname)
+  draw = ImageDraw.Draw(image)
+  myfont = ImageFont.truetype('/usr/share/fonts/truetype/DejaVuSansMono-Bold.ttf', 42)
+  text = f"Z:{Z:.2f}"
+  text_color = (255, 0, 0)
+  draw.text((730, 36), text, font=myfont, fill=(0, 0, 0))
+
+  print("Saving plot: ", imgname_z)
+  image.save(imgname_z)
 
 def tn_phaseplot(simdir, outnum, simtyp, boxlen_comov, overwrite): 
   outnum_char  = str(outnum).zfill(5)
@@ -341,6 +369,15 @@ def tn_phaseplot(simdir, outnum, simtyp, boxlen_comov, overwrite):
   Z  = ds.current_redshift
   Zint2 = round(Z,2)
   imgname_z    =  "tn_" + simtyp + "_z"+ str(Zint2) +  ".png"
+
+  #family = np.array(ad['all', 'particle_family'])
+  #alldens = np.array(ad['ramses', 'Density'])
+  #alltemp = np.array(ad['ramses', 'Pressure']) 
+
+  #print("len : ", len(family),  len(alldens), len(alltemp))
+  #for ip in range(0, len(family)) :
+  #  if(family[ip] == 2.0) :
+  #    print("family :", family[ip], alldens[ip], alltemp[ip])
 
   if( not os.path.exists(imgname_z) or overwrite) :
     plot = yt.PhasePlot(ad, (('gas', 'number_density')), ("gas", "temperature"), ("gas", "mass"))
@@ -526,11 +563,12 @@ def plot_proj_halo_gasdens(simdir, outnum, simtyp, numplot):
   #sink_mass = np.array(sp[("sink", "particle_mass")].in_units('Msun'))
 
 def write_halos(simdir, outnum):
-  outnum_char       = str(outnum).zfill(5)
+  outnum_char      = str(outnum).zfill(5)
   outdir           = simdir+'/output_' + outnum_char
-  halocatalog_file  = outdir + '/info_'+ outnum_char + '/info_' + outnum_char +'.0.h5'
-  halo_ds           = yt.load(halocatalog_file)
-  halo_ad           = halo_ds.all_data()
+  halocatalog_file = outdir + '/info_'+ outnum_char + '/info_' + outnum_char +'.0.h5'
+  halo_ds          = yt.load(halocatalog_file)
+  halo_ad          = halo_ds.all_data()
+  Zcurr            = halo_ds.current_redshift
 
   #NumPart   = np.array( halo_ad['halos', 'particle_number'] )
   halo_mass = np.array( halo_ad['halos', 'particle_mass'].in_units("Msun") )
@@ -539,6 +577,7 @@ def write_halos(simdir, outnum):
   halo_posy = np.array( halo_ad['halos', 'particle_position_y'] )
   halo_posz = np.array( halo_ad['halos', 'particle_position_z'])
   NumPart   = np.array( halo_ad['halos', 'particle_number'] )
+
   nhalo     = len(halo_mass)
 
   outfile   = outdir + '/info_'+ outnum_char + "/halodata.csv"
@@ -546,7 +585,7 @@ def write_halos(simdir, outnum):
   print("writing : ", nhalo, "halos in : ", outfile)
   with open(outfile, 'w') as file:
     for ihalo in range(0, nhalo):
-      line = f"{ihalo+1}\t{halo_posx[ihalo]:.6f}\t{halo_posy[ihalo]:.6f}\t{halo_posz[ihalo]:.6f}\t{Rvir[ihalo]:.6f}\t{halo_mass[ihalo]:.6f}\t{NumPart[ihalo]:.6f}\n"
+      line = f"{ihalo+1}\t{halo_posx[ihalo]:.6f}\t{halo_posy[ihalo]:.6f}\t{halo_posz[ihalo]:.6f}\t{Rvir[ihalo]:.6f}\t{halo_mass[ihalo]:.6f}\t{NumPart[ihalo]:.6f}\t{Zcurr:.4f}\n"
       file.write(line)
       #if(ihalo < 10):
       #  print(ihalo+1, halo_posx[ihalo], halo_posy[ihalo], halo_posz[ihalo], Rvir[ihalo], halo_mass[ihalo],NumPart[ihalo])
@@ -578,6 +617,7 @@ def volumefrac(simdir, outnum, lbox, t_frac):
     return[Z, volfrac]
   else :
     raise ValueError("My error: File" , outdir ,"does not exist")
+
 
 
 
